@@ -1,80 +1,179 @@
 import React, { useState } from "react";
-import styles from './styles.module.css';
+import styles from "./styles.module.css";
+import Modal from "./Modal";
+import { Typography, LinearProgress, Box, Paper } from "@mui/material";
+
 
 const ContractFunctions = (props) => {
-    const [description, setDescription] = useState("");
-    const [goal, setGoal] = useState(0);
-    const [caseId, setCaseId] = useState(0);
-    const [amount, setAmount] = useState(0);
-    const [donateCaseId, setDonateCaseId] = useState(null);
-
-    const handleCreateCase = async () => {
-        try {
-            await props.contract.methods.createCase(description, goal).send({ from: props.accounts[0] });
-            alert('¡Caso creado correctamente!');
-        } catch (error) {
-            console.error(error);
-        }
-    };
-
-    const handleDonate = async () => {
-        try {
-            await props.contract.methods.donate(donateCaseId).send({ from: props.accounts[0], value: amount });
-            alert('¡Donación realizada correctamente!');
-        } catch (error) {
-            console.error(error);
-        }
-    };
-
-    const handleGetCase = async () => {
-        try {
-            const result = await props.contract.methods.getCase(caseId).call();
-            window.alert(`Case ID: ${result.id}\nDescription: ${result.description}\nGoal: ${result.goal}\nAmount Raised: ${result.amountRaised}\nFunded: ${result.funded}`);
-        } catch (error) {
-            console.error(error);
-        }
-    };
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalContent, setModalContent] = useState(null);
+  const [createCaseModal, setCreateCaseModal] = useState(false);
+  const [donateModal, setDonateModal] = useState(false);
+  const [getCaseModal, setGetCaseModal] = useState(false);
 
 
+  const handleCreateCase = () => {
+    setCreateCaseModal(true);
+  };
 
-    return (
-        <div className={styles.container}>
-            <h2>Crear un nuevo caso</h2>
-            <div className={styles.formGroup}>
-                <label htmlFor="description">Descripción:</label>
-                <input type="text" id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Ingrese una descripción..." />
-            </div>
-            <div className={styles.formGroup}>
-                <label htmlFor="goal">Objetivo:</label>
-                <input type="number" id="goal" value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="Ingrese un objetivo..." />
-            </div>
-            <div className={styles.formGroup}>
-                <button onClick={handleCreateCase}>Crear caso</button>
-            </div>
+  const handleDonate = () => {
+    setDonateModal(true);
+  };
 
-            <h2>Obtener información de un caso</h2>
-            <div className={styles.formGroup}>
-                <label htmlFor="caseId">ID del caso:</label>
-                <input type="number" id="caseId" name="getIDCase" value={caseId} onChange={(e) => setCaseId(e.target.value)} placeholder="Ingrese el ID del caso..." />
-            </div>
-            <div className={styles.formGroup}>
-                <button onClick={handleGetCase}>Buscar</button>
-            </div>
+  const handleGetCase = () => {
+    setGetCaseModal(true);
+  };
 
-            <h2>Realizar donación a un caso</h2>
-            <div className={styles.formGroup}>
-                <label htmlFor="caseIdDonate">ID del caso:</label>
-                <input type="number" id="caseIdDonate" name="donateIDCase" value={donateCaseId} onChange={(e) => setDonateCaseId(e.target.value)} placeholder="Ingrese el ID del caso..." />
-            </div>
-            <div className={styles.formGroup}>
-                <label htmlFor="amount">Cantidad:</label>
-                <input type="number" id="amount" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Ingrese la cantidad a donar..." />
-            </div>
-            <div className={styles.formGroup}>
-                <button onClick={handleDonate}>Donar</button>
-            </div>
+  const createCase = async (description, goal) => {
+    try {
+      await props.contract.methods.createCase(description, goal).send({ from: props.accounts[0] });
+      updateModalContent(
+        <div>
+          <h3>¡Caso creado con éxito!</h3>
+          <p>
+            Se ha creado un nuevo caso con la descripción "{description}" y un
+            objetivo de {goal}.
+          </p>
         </div>
-    );
+      );
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const donateCase = async (donateCaseId, amount) => {
+    try {
+      await props.contract.methods.donate(donateCaseId).send({ from: props.accounts[0], value: amount });
+      updateModalContent(
+        <div>
+          <h3>¡Donación realizada con éxito!</h3>
+          <p>
+            Se ha realizado una nueva donación de {amount}ETH para el caso {donateCaseId}.
+          </p>
+        </div>
+      );
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const getCase = async (caseId) => {
+    try {
+      const result = await props.contract.methods.getCase(caseId).call();
+      updateModalContent(
+        <Paper sx={{ padding: 4, width: "100%", maxWidth: 400 }}>
+          <Typography variant="h4" gutterBottom>
+            Información del caso
+          </Typography>
+          <Typography variant="h6">
+            ID Caso: {result.id}
+          </Typography>
+          <Typography variant="h6">
+            Descripción: {result.description}
+          </Typography>
+          <Typography variant="h6">
+            Objetivo: {result.goal}
+          </Typography>
+          <Typography variant="h6">
+            Cantidad recaudada: {result.amountRaised}
+          </Typography>
+          <Typography variant="h6">
+            Completado: {result.funded ? "Sí" : "No"}
+          </Typography>
+          <Box sx={{ marginTop: 3 }}>
+            <LinearProgress
+              variant="determinate"
+              value={(result.amountRaised / result.goal) * 100}
+              sx={{ height: 20 }}
+            />
+          </Box>
+        </Paper>
+      );
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const updateModalContent = (content) => {
+    setModalContent(content);
+    handleModalOpen();
+  };
+
+  const handleModalOpen = () => {
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+  };
+
+  return (
+    <div className="App">
+      <div className={styles.cardContainer}>
+        <div className={styles.card} onClick={handleCreateCase}>
+          <span className={styles.cardIcon}>📝</span>
+          <h2 className={styles.cardTitle}>Crear caso</h2>
+          <p className={styles.cardDescription}>
+            Crea un nuevo caso de financiación para el cerebro.
+          </p>
+        </div>
+
+        <div className={styles.card} onClick={handleDonate}>
+          <span className={styles.cardIcon}>💰</span>
+          <h2 className={styles.cardTitle}>Donar</h2>
+          <p className={styles.cardDescription}>
+            Realiza una donación a un caso existente.
+          </p>
+        </div>
+
+        <div className={styles.card} onClick={handleGetCase}>
+          <span className={styles.cardIcon}>🔍</span>
+          <h2 className={styles.cardTitle}>Consultar caso</h2>
+          <p className={styles.cardDescription}>
+            Consulta la información de un caso existente.
+          </p>
+        </div>
+      </div>
+
+      {/* Create Case Modal */}
+      <Modal
+        isOpen={createCaseModal}
+        onClose={() => setCreateCaseModal(false)}
+        type="create"
+        handleCreateCase={handleCreateCase}
+        createCase={createCase}
+      />
+
+      {/* Donate Modal */}
+      <Modal
+        isOpen={donateModal}
+        onClose={() => setDonateModal(false)}
+        type="donate"
+        handleDonate={handleDonate}
+        donateCase={donateCase}
+      />
+
+      {/* Get Case Modal */}
+      <Modal
+        isOpen={getCaseModal}
+        onClose={() => setGetCaseModal(false)}
+        type="getCase"
+        handleGetCase={handleGetCase}
+        getCase={getCase}
+      />
+
+      {/* Result Modal */}
+      <Modal
+        isOpen={modalOpen}
+        onClose={closeModal}
+        type={modalContent ? "custom" : null}
+        modalContent={modalContent}
+        createCase={createCase}
+        donateCase={donateCase}
+        getCase={getCase}
+      />
+    </div>
+  );
 };
 
 export default ContractFunctions;
